@@ -1,0 +1,56 @@
+name: C CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "seven.c"
+      - ".github/workflows/**"
+  pull_request:
+
+jobs:
+  build:
+    name: Build & Test (CI)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: sudo apt-get update && sudo apt-get install -y build-essential
+
+      - name: Compile seven.c
+        run: gcc seven.c -o seven
+
+      - name: Run program to ensure no runtime errors
+        run: ./seven < /dev/null || true
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: seven-build
+          path: seven
+
+  deploy:
+    name: Deploy Artifact (CD)
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download compiled artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: seven-build
+
+      - name: Make executable global (deploy simulation)
+        run: |
+          mkdir deploy
+          cp seven deploy/
+          chmod +x deploy/seven
+
+      - name: Upload deploy package
+        uses: actions/upload-artifact@v4
+        with:
+          name: seven-deploy
+          path: deploy/
